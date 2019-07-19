@@ -1,6 +1,8 @@
 import Parameters from './Parameters';
 import Eigen from './Eigen';
 
+let debugCounter = 0;
+
 export default class NeuralNet {
   constructor() {
     this.XDim = 480;
@@ -79,15 +81,26 @@ export default class NeuralNet {
   }
 
   predict() {
+    if (debugCounter === 0) {
+      console.log('X', JSON.stringify(this.X.selection.data));
+    }
     this.Y = Eigen.Normalise(this.X, this.Xmean, this.Xstd, this.Y);
+    if (debugCounter === 0) {
+      console.log('Y', this.Y.selection.data);
+    }
     // Process Gating Network
     for (let i = 0; i < this.ControlNeurons.length; i += 1) {
       this.BX.set(i, 0, this.Y.get(this.ControlNeurons[i], 0));
     }
+    if (debugCounter === 0) {
+      console.log('BX', this.BX.selection.data);
+    }
     this.BY = Eigen.ELU(Eigen.Layer(this.BX, this.BW0, this.Bb0, this.BY));
     this.BY = Eigen.ELU(Eigen.Layer(this.BY, this.BW1, this.Bb1, this.BY));
     this.BY = Eigen.SoftMax(Eigen.Layer(this.BY, this.BW2, this.Bb2, this.BY));
-
+    if (debugCounter === 0) {
+      console.log('BY', this.BY.selection.data);
+    }
     // Generate Network Weights
     Eigen.setZero(this.W0);
     Eigen.setZero(this.b0);
@@ -99,16 +112,31 @@ export default class NeuralNet {
     for (let i = 0; i < this.YDimBlend; i += 1) {
       const weight = this.BY.get(i, 0);
       Eigen.Blend(this.W0, this.CW[6 * i + 0], weight);
+      if (debugCounter === 0) {
+        console.log('CW', this.CW[6 * i + 0].selection.data, weight, this.W0.selection.data);
+      }
       Eigen.Blend(this.b0, this.CW[6 * i + 1], weight);
       Eigen.Blend(this.W1, this.CW[6 * i + 2], weight);
       Eigen.Blend(this.b1, this.CW[6 * i + 3], weight);
       Eigen.Blend(this.W2, this.CW[6 * i + 4], weight);
       Eigen.Blend(this.b2, this.CW[6 * i + 5], weight);
     }
+    if (debugCounter === 0) {
+      console.log('w0', this.W0.selection.data, 'b0', this.b0.selection.data);
+    }
 
     this.Y = Eigen.ELU(Eigen.Layer(this.Y, this.W0, this.b0, this.Y));
+    if (debugCounter === 0) {
+      console.log('temp y', this.Y.selection.data);
+    }
     this.Y = Eigen.ELU(Eigen.Layer(this.Y, this.W1, this.b1, this.Y));
     this.Y = Eigen.Layer(this.Y, this.W2, this.b2, this.Y);
     this.Y = Eigen.Renormalise(this.Y, this.Ymean, this.Ystd, this.Y);
+    if (debugCounter === 0) {
+      console.log('Y', this.Y.selection.data);
+    }
+    if (debugCounter === 0) {
+      debugCounter += 1;
+    }
   }
 }
